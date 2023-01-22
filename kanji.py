@@ -158,9 +158,13 @@ with open('kw.csv', newline='') as csvfile:
 mid = []
 
 for k, v in unidata.items():
+    man = v.get('kHanyuPinyin', '')
+    if man != '':
+        man = man.split(':')[1].replace(',', ' ')
+    else:
+        man = v.get('kMandarin', '')
     output = [k, v.get('inital', ''), v.get('final', ''), v.get('tone', ''),
-    v.get('upper', ''), v.get('lower', ''), 
-    v.get('kHanyuPinyin', '').partition(':')[2].replace(',', ' '), 
+    v.get('upper', ''), v.get('lower', ''), man,
     v.get('kCantonese', ''), v.get('kJapaneseOn', '').lower(), v.get('kVietnamese', ''),
     v.get('kHangul', '').translate(str.maketrans({'0':'', '1':'', '2':'', '3':'', 'E':'', 'N':'', 'X':'', ':':''})),
     v.get('kPhonetic', '').replace('*', '')]
