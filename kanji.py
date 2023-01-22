@@ -134,7 +134,7 @@ with open('Unihan_DictionaryLikeData.txt') as unidic:
 with open('kw.csv', newline='') as csvfile:
     kwreader = csv.reader(csvfile, delimiter=' ')
     for row in kwreader:
-        row = row.__str__().split(',')
+        row = str(row).split(',')
         kanji = row[6]
         if kanji not in unidata.keys():
             unidata[kanji] = dict()
@@ -155,14 +155,22 @@ with open('kw.csv', newline='') as csvfile:
         except:
             print(row)
 
+rhymes = dict()
+with open('rhyme.csv') as rhymefile:
+    for line in rhymefile.readlines():
+        row = str(line).rstrip().split(',')
+        rhymes[row[4]] = dict()
+        rhymes[row[4]]['she'] = row[0]
+        rhymes[row[4]]['yun'] = row[1]
+        rhymes[row[4]]['deng'] = row[2]
+        rhymes[row[4]]['hu'] = row[3]
+
 mid = []
 
 for k, v in unidata.items():
     man = v.get('kHanyuPinyin', '')
     if man != '':
         man = man.split(':')[1].replace(',', ' ')
-    else:
-        man = v.get('kMandarin', '')
     output = [k, v.get('inital', ''), v.get('final', ''), v.get('tone', ''),
     v.get('upper', ''), v.get('lower', ''), man,
     v.get('kCantonese', ''), v.get('kJapaneseOn', '').lower(), v.get('kVietnamese', ''),
@@ -174,6 +182,7 @@ with open('result.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(['kanji', 'inital', 'final', 'tone', 'upper', 'lower',
+        'she', 'yun', 'division', 'rounding',
         'Minital', 'Mfinal', 'Mandarin', 'Cinital', 'Cfinal', 'Cantonese',
         'Jinital', 'Jfinal', 'Japanese', 'Vinital', 'Vfinal', 'Vietnamese',
         'Kinital', 'Kfinal', 'Korean', 'Pictophonetic'])
@@ -183,6 +192,15 @@ with open('result.csv', 'w', newline='') as csvfile:
         jap = myzip([sep_japanese(x) for x in data[8].split(' ')])
         vet = myzip([sep_vietnamese(x) for x in data[9].split(' ')])
         kor = myzip([sep_korean(x) for x in data[10].split(' ')])
+        if data[2] != '':
+            ylist = [
+                rhymes[data[2]]['she'],
+                rhymes[data[2]]['yun'],
+                rhymes[data[2]]['deng'],
+                rhymes[data[2]]['hu'],
+            ]
+        else:
+            ylist = ['', '', '', '']
         dlist = [
             man[0], man[1], data[6],
             can[0], can[1], data[7],
@@ -190,5 +208,5 @@ with open('result.csv', 'w', newline='') as csvfile:
             vet[0], vet[1], data[9],
             kor[0], kor[1], data[10]
         ]
-        writer.writerow(data[0:6] + dlist + [data[11]])
+        writer.writerow(data[0:6] + ylist + dlist + [data[11]])
 
