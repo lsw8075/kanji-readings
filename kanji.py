@@ -85,11 +85,13 @@ def sep_vietnamese(vietnamese):
     if len(vietnamese) >= 2:
         if len(vietnamese) >= 3 and vietnamese[2] == 'h':
             return ('ng', vietnamese[3:])
-        if vietnamese[1] == 'h' or vietnamese[1] == 'r':
-            if vietnamese[0] == 'g':
+        if len(vietnamese) >= 2 and vietnamese[0] == 'g':
+            if vietnamese[1] == 'h':
                 return ('g', vietnamese[2:])
-            else:
+            elif vietnamese[1] == 'i':
                 return (vietnamese[:2], vietnamese[2:])
+            elif vietnamese[1] == 'ị':
+                return ('gi', vietnamese[1:])
     if vietnamese[0] == 'q' or vietnamese[0] == 'k':
         return ('c', vietnamese[1:])
     elif vietnamese[0] in 'bcdđghlmnprstvx':
@@ -181,12 +183,12 @@ for k, v in unidata.items():
 with open('result.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(['kanji', 'inital', 'final', 'tone', 'upper', 'lower',
-        'she', 'yun', 'division', 'rounding',
-        'Minital', 'Mfinal', 'Mandarin', 'Cinital', 'Cfinal', 'Cantonese',
-        'Jinital', 'Jfinal', 'Japanese', 'Vinital', 'Vfinal', 'Vietnamese',
-        'Kinital', 'Kfinal', 'Korean', 'Pictophonetic'])
-    for data in mid:
+    writer.writerow(['unicode', 'kanji', 'initial', 'final', 'tone',
+        'upper', 'lower', 'she', 'yun', 'division', 'rounding',
+        'Minitial', 'Mfinal', 'Mandarin', 'Cinitial', 'Cfinal', 'Cantonese',
+        'Jinitial', 'Jfinal', 'Japanese', 'Vinitial', 'Vfinal', 'Vietnamese',
+        'Kinitial', 'Kfinal', 'Korean', 'Pictophonetic'])
+    for data in sorted(mid, key=lambda x: x[0]):
         man = myzip([sep_mandarin(x) for x in data[6].split(' ')])
         can = myzip([sep_mandarin(x) for x in data[7].split(' ')])
         jap = myzip([sep_japanese(x) for x in data[8].split(' ')])
@@ -208,5 +210,5 @@ with open('result.csv', 'w', newline='') as csvfile:
             vet[0], vet[1], data[9],
             kor[0], kor[1], data[10]
         ]
-        writer.writerow(data[0:6] + ylist + dlist + [data[11]])
+        writer.writerow(['u+'+hex(ord(data[0]))[2:]] + data[0:6] + ylist + dlist + [data[11]])
 
