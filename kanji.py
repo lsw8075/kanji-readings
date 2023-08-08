@@ -1,6 +1,7 @@
 
 import csv
 import unicodedata
+import hashlib
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -341,16 +342,65 @@ finals = '東冬鍾江支脂之微魚模虞泰廢夬佳皆祭齊咍灰眞臻諄�
 
 for inittable in inittables:
     inittable.append(['韻'] + [c for c in initials])
+    for i in range(len(initials)):
+        inittable.column_dimensions[get_column_letter(i + 2)].width = 5
 
 for finaltable in finaltables:
     finaltable.append(['韻'] + [c for c in initials])
+    for i in range(len(initials)):
+        finaltable.column_dimensions[get_column_letter(i + 2)].width = 5
+
+
+def getmaxfill(x):
+    if len(x) == 0:
+        c = 'ffffff'
+    else:
+        maxkey = max(x,key=x.get)
+        m = hashlib.md5()
+        m.update(maxkey.encode('utf-8'))
+        c = m.hexdigest()[0:6]
+    pfill = PatternFill(start_color=c, end_color=c, fill_type='solid')
+    return pfill
+
+L_table = {
+    0: 0.3,
+    3: 0.6, 
+    7: 0.7,
+    15: 0.8,
+    16: 0.9,
+    20: 0.4,
+    21: 0.8
+}
+
+def hangul_maxfill(x):
+    if len(x) == 0:
+        c = 'ffffff'
+    else:
+        final = max(x,key=x.get)
+        if final == '':
+            return 'ffffff'
+        jung = ord(final[1]) - 0x1161
+        if jung >= 3:
+            jung = jung - 1
+        H = jung * 18
+        L = 0.5
+        if len(final) > 2:
+            jong = ord(final[2]) - 0x11A8
+            L = L_table[jong]
+        k = divmod(H/30, 12)[1]
+        f = (lambda n: L - min(L, 1-L) * max(-1, min(divmod(n + H/30, 12)[1]-3, 9-divmod(n + H/30, 12)[1], 1)))
+        s = (lambda x: "%02x" % int(round(x * 255)))
+        c = s(f(0)) + s(f(8)) + s(f(4))
+    pfill = PatternFill(start_color=c, end_color=c, fill_type='solid')
+    return pfill
+
 
 for langno in range(5):
-    for final in sorted(ifd.keys(), key=lambda x: finals.find(x[0])):
+    for idx, final in enumerate(sorted(ifd.keys(), key=lambda x: finals.find(x[0]))):
         finaldict = ifd[final]
         inicols = []
         fincols = []
-        for initial in initials:
+        for jdx, initial in enumerate(initials):
             if initial not in finaldict.keys():
                 inicols.append('')
                 fincols.append('')
@@ -358,7 +408,15 @@ for langno in range(5):
                 langdicts = finaldict[initial][langno+1]
                 inicols.append(strfy(langdicts[0]))
                 fincols.append(strfy(langdicts[1]))
+
         inittables[langno].append([final] + inicols)
         finaltables[langno].append([final] + fincols)
+
+        for jdx, initial in enumerate(initials):
+            if initial in finaldict.keys():
+                langdicts = finaldict[initial][langno+1]
+                inittables[langno].cell(row=idx+2, column=jdx+2).fill = getmaxfill(langdicts[0])
+                finaltables[langno].cell(row=idx+2, column=jdx+2).fill = \
+                    getmaxfill(langdicts[1]) if langno != 4 else hangul_maxfill(langdicts[1])
 
 wb.save('result.xlsx')
