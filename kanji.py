@@ -70,7 +70,7 @@ def sep_japanese(japanese):
                     return ('t', japanese[2:])
                 else:
                     return ('t', 'y' + japanese[2:])
-        elif japanese[0] == 't' or japanese[1] == 's':
+        elif japanese[0] == 't' and japanese[1] == 's':
             return ('t', japanese[2:])
     if japanese[0] == 'j':
         if japanese[1] == 'i':
@@ -106,7 +106,7 @@ def sep_korean(korean):
     if korean == '':
         return ('', '')
     nfd = unicodedata.normalize('NFD', korean)
-    return (nfd[0], chr(0x110B) + nfd[1:])
+    return (nfd[0], unicodedata.normalize('NFC', chr(0x110B) + nfd[1:]))
     
 unidata = dict()
 
@@ -209,7 +209,8 @@ pictotable = wb.create_sheet('pictolist')
 
 sd = dict()
 pd = dict()
-ifd = dict()
+initiald = dict()
+finald = dict()
 
 datatable.append(['unicode', 'kanji', 'initial', 'final', 'tone',
         'upper', 'lower', 'she', 'yun', 'division', 'rounding',
@@ -218,6 +219,7 @@ datatable.append(['unicode', 'kanji', 'initial', 'final', 'tone',
         'Kinitial', 'Kfinal', 'Korean', 'Pictophonetic', 'Soothill', 'Frequency'])
 
 soothilltable.append(['number', 'kanjis',
+                      'initial', 'final',
                       'Mini', 'Mfin',
                       'Cini', 'Cfin',
                       'Jini', 'Jfin',
@@ -225,6 +227,7 @@ soothilltable.append(['number', 'kanjis',
                       'Kini', 'Kfin'])
 
 pictotable.append(['number', 'kanjis',
+                      'initial', 'final',
                       'Mini', 'Mfin',
                       'Cini', 'Cfin',
                       'Jini', 'Jfin',
@@ -280,6 +283,8 @@ for data in sorted(mid, key=lambda x: x[0]):
     else:
         flist = ['', '']
 
+    datatable.append(['u+'+hex(ord(data[0]))[2:]] + data[0:6] + ylist + dlist + [data[11]] + flist)
+
     for pnraw in data[11].split():
         pn = int(pnraw[:-1] if pnraw[-1].isalpha() else pnraw)
         if pn not in pd.keys():
@@ -287,18 +292,29 @@ for data in sorted(mid, key=lambda x: x[0]):
         pd[pn][0] += data[0]
         inccount(pd[pn][1])
 
-    if data[2] != '':
-        final_modified = data[2] + '入' if data[3] == '入' else data[2]
-        if final_modified not in ifd.keys():
-            ifd[final_modified] = dict()
-        if data[1] not in ifd[final_modified].keys():
-            ifd[final_modified][data[1]] = initcount()
+    if kor[0] != '':
+        data[1] = kor[0][0]
+        data[2] = kor[1].split()[0]
+        data[3] = ''
+    else:
+        data[2] = ''
     
-        inccount(ifd[final_modified][data[1]])
+    if data[2] != '':
+        finalwithtone = data[2] + data[3]
+        if finalwithtone not in finald.keys():
+            finald[finalwithtone] = dict()
+        if data[1] not in finald[finalwithtone].keys():
+            finald[finalwithtone][data[1]] = initcount()
+        inccount(finald[finalwithtone][data[1]])
 
-    datatable.append(['u+'+hex(ord(data[0]))[2:]] + data[0:6] + ylist + dlist + [data[11]] + flist)
+        if data[2] not in initiald.keys():
+            initiald[data[2]] = dict() 
+        if data[1] not in initiald[data[2]].keys():
+            initiald[data[2]][data[1]] = initcount()
+        inccount(initiald[data[2]][data[1]])
+    
+    
 
-datatable.auto_filter.ref = datatable.dimensions
 
 def strfy(d):
     s = ''
@@ -314,6 +330,12 @@ def countl(count):
             strfy(count[4][0]), strfy(count[4][1]),
             strfy(count[5][0]), strfy(count[5][1])
     ]
+
+def setborder(ws, cols, i):
+    b = Border(right=Side(border_style='thin', color='000000'))
+    rnum = str(i + 2)
+    for col in cols:
+        ws[col + rnum].border = b
 
 for k, v in dict(sorted(sd.items())).items():
     soothilltable.append([k, v[0]] + countl(v[1]))
@@ -337,26 +359,43 @@ finaltables = [
     wb.create_sheet('Kfinallist')
 ]
 
-initials = '幫滂並明端透定泥知徹澄孃精清從心邪莊初崇生俟章昌常書船見溪羣疑影曉匣云以日來'
-finals = '東冬鍾江支脂之微魚模虞泰廢夬佳皆祭齊咍灰眞臻諄痕魂欣文寒桓元刪山仙先豪肴宵蕭歌戈麻唐陽庚耕清青登蒸尤侯幽侵談嚴凡銜咸鹽添覃'
+#initials = '幫滂並明端透定泥知徹澄孃精清從心邪莊初崇生俟章昌常書船見溪羣疑影匣云曉來日以'
+#finals = '東冬鍾江支脂之微魚模虞泰廢夬佳皆祭齊咍灰眞臻諄痕魂欣文元寒桓刪山仙先豪肴宵蕭歌戈麻唐陽庚耕清青登蒸尤侯幽侵談嚴凡銜咸鹽添覃'
+initials = 'ᄋᄀᄏᄒᄂᄃᄐᄅᄆᄇᄑᄉᄌᄎ'
+finals = '아악안알암압앙애액앵야약양어억언얼엄업엉에엔여역연열염엽영예오옥온올옹옺와왁완왈왕왜외왹욍요욕용우욱운울움웅원월웨위유육윤율융윽은을음읍응의이익인일임입잉'
 
 for inittable in inittables:
+    #inittable.append(['韻', '攝', '等'] + [c for c in initials])
     inittable.append(['韻'] + [c for c in initials])
-    for i in range(len(initials)):
-        inittable.column_dimensions[get_column_letter(i + 2)].width = 5
+    for i in range(len(initials)+2):
+        inittable.column_dimensions[get_column_letter(i + 2)].width = 4
 
 for finaltable in finaltables:
+    #finaltable.append(['韻', '攝', '等'] + [c for c in initials])
     finaltable.append(['韻'] + [c for c in initials])
-    for i in range(len(initials)):
-        finaltable.column_dimensions[get_column_letter(i + 2)].width = 5
+    for i in range(len(initials)+2):
+        finaltable.column_dimensions[get_column_letter(i + 2)].width = 4
 
-
+remove_tone = {
+    'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
+    'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
+    'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
+    'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
+    'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
+    'ǖ': 'ü', 'ǘ': 'ü', 'ǚ': 'ü', 'ǜ': 'ü'
+}
 def getmaxfill(x):
     if len(x) == 0:
         c = 'ffffff'
     else:
         maxkey = max(x,key=x.get)
-        m = hashlib.md5()
+        if maxkey[0] in remove_tone:
+            maxkey = remove_tone[maxkey[0]] + maxkey[1:]
+        if len(maxkey) >= 2 and maxkey[1] in remove_tone:
+            maxkey = maxkey[0] + remove_tone[maxkey[1]] + maxkey[2:]
+        if maxkey[-1] in '123456':
+            maxkey = maxkey[:-1]
+        m = hashlib.sha1()
         m.update(maxkey.encode('utf-8'))
         c = m.hexdigest()[0:6]
     pfill = PatternFill(start_color=c, end_color=c, fill_type='solid')
@@ -373,10 +412,12 @@ L_table = {
 }
 
 def hangul_maxfill(x):
+
     if len(x) == 0:
         c = 'ffffff'
     else:
         final = max(x,key=x.get)
+        final = unicodedata.normalize('NFD', final)
         if final == '':
             return 'ffffff'
         jung = ord(final[1]) - 0x1161
@@ -394,29 +435,67 @@ def hangul_maxfill(x):
     pfill = PatternFill(start_color=c, end_color=c, fill_type='solid')
     return pfill
 
+def evalchar(x):
+    if x == '入':
+        return 0
+    elif x == '平':
+        return 1
+    elif x == '去':
+        return 2
+    elif x == '上':
+        return 3
+    else:
+        return ord(x)
+
+def finalsortkey(x):
+    r = finals.find(x[0]) * (2 ** 54)
+    if len(x) >= 2:
+        r += evalchar(x[1]) * (2 ** 36)
+        if len(x) >= 3:
+            r += evalchar(x[2]) * (2 ** 18)
+            if len(x) >= 4:
+                r += evalchar(x[3])
+    return r
+
+def remove_extra(x):
+    return x.rstrip('平上去入')
 
 for langno in range(5):
-    for idx, final in enumerate(sorted(ifd.keys(), key=lambda x: finals.find(x[0]))):
-        finaldict = ifd[final]
-        inicols = []
+    for idx, final in enumerate(sorted(finald.keys(), key=finalsortkey)):
+        finaldict = finald[final]
         fincols = []
         for jdx, initial in enumerate(initials):
             if initial not in finaldict.keys():
-                inicols.append('')
                 fincols.append('')
             else:
                 langdicts = finaldict[initial][langno+1]
-                inicols.append(strfy(langdicts[0]))
                 fincols.append(strfy(langdicts[1]))
-
-        inittables[langno].append([final] + inicols)
+        #finaltables[langno].append([final, rhymes[remove_extra(final)]['she'], rhymes[remove_extra(final)]['deng']] + fincols)
         finaltables[langno].append([final] + fincols)
 
         for jdx, initial in enumerate(initials):
             if initial in finaldict.keys():
                 langdicts = finaldict[initial][langno+1]
-                inittables[langno].cell(row=idx+2, column=jdx+2).fill = getmaxfill(langdicts[0])
                 finaltables[langno].cell(row=idx+2, column=jdx+2).fill = \
                     getmaxfill(langdicts[1]) if langno != 4 else hangul_maxfill(langdicts[1])
 
-wb.save('result.xlsx')
+
+    for idx, final in enumerate(sorted(initiald.keys(), key=finalsortkey)):
+        finaldict = initiald[final]
+        inicols = []
+        for jdx, initial in enumerate(initials):
+            if initial not in finaldict.keys():
+                inicols.append('')
+            else:
+                langdicts = finaldict[initial][langno+1]
+                inicols.append(strfy(langdicts[0]))
+        #inittables[langno].append([final, rhymes[final]['she'], rhymes[final]['deng']] + inicols)
+        inittables[langno].append([final] + inicols)
+
+
+        for jdx, initial in enumerate(initials):
+            if initial in finaldict.keys():
+                langdicts = finaldict[initial][langno+1]
+                inittables[langno].cell(row=idx+2, column=jdx+2).fill = getmaxfill(langdicts[0])
+
+wb.save('result-kor.xlsx')
